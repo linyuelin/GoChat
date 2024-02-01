@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Firebase
 
 class LoginViewController: UIViewController {
 
@@ -126,6 +127,22 @@ class LoginViewController: UIViewController {
             return
         }
         //Firebaseを介してサインインする
+        FirebaseAuth.Auth.auth().signIn(withEmail: email , password: password , completion: { [weak self]
+            authResult , error in
+            
+            guard let strongSelf = self else {
+                return
+            }
+            
+            
+            guard let result = authResult , error == nil else {
+                print("\(email)ログイン失敗")
+                      return
+            }
+              
+            strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            
+        })
     }
     
     func  alertUserLoginError() {

@@ -6,12 +6,12 @@
 //
 
 import UIKit
-
+import FirebaseAuth
 class RegisterViewController: UIViewController {
 
     private let imageView: UIImageView = {
         let image =  UIImageView()
-        image.image = UIImage(systemName:  "person")
+        image.image = UIImage(systemName:  "person.circle")
         image.tintColor = .gray  //画像の色をグレーに設定する
         image.contentMode  = .scaleAspectFit
         image.layer.masksToBounds = true
@@ -67,7 +67,7 @@ class RegisterViewController: UIViewController {
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
         field.backgroundColor = .white
-        field.isSecureTextEntry = true
+        field.isSecureTextEntry = false
         return field
     }()
     
@@ -192,15 +192,44 @@ class RegisterViewController: UIViewController {
         
         guard let firstName = firstNameField.text ,let lastName = lastNameField.text ,let email = emailField.text , let password = passwordField.text ,
               
-              !email.isEmpty , !firstName.isEmpty ,!lastName.isEmpty , !password.isEmpty ,password.count >= 6 else {
+                !email.isEmpty , !firstName.isEmpty ,!lastName.isEmpty , !password.isEmpty ,password.count >= 6 else {
             alertUserLoginError()
             return
         }
-        //Firebaseを介してサインインする
+        
+        DatabaseManager.shared.userExists(with: email, completion: { [weak self] exists in
+            
+            guard let strongSelf = self else{
+                return
+            }
+            
+            guard !exists else {
+                //存在してるユーザー
+                strongSelf.alertUserLoginError(message: "このメールアドレスは既に使用されています。別のメールアドレスを試してください。")
+                return
+            }
+            
+            FirebaseAuth.Auth.auth().createUser(withEmail: email, password: password,completion: { authResult , error in
+                
+               
+                
+                guard  authResult != nil  , error == nil else {
+                    print("アカンウト作成に失敗")
+                    return
+                }
+                
+                //成功した場合
+                DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email))
+                
+                strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            })
+            
+        })
     }
+        
     
-    func  alertUserLoginError() {
-        let alert = UIAlertController(title: "エラー", message: "すべての情報を入力してください", preferredStyle: .alert
+    func  alertUserLoginError(message: String = "すべての情報を入力してください") {
+        let alert = UIAlertController(title: "エラー", message:message , preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "閉じる", style: .cancel, handler: nil))
         
@@ -235,7 +264,7 @@ extension RegisterViewController: UITextFieldDelegate {
         //押された場合、ログインボタンの処理を実行する
         else if  textField == passwordField {
             
-            registerButtonTapped()
+            textField.resignFirstResponder()
         }
         return true
     }
@@ -298,7 +327,7 @@ extension RegisterViewController: UIImagePickerControllerDelegate , UINavigation
     }
     
     
-     //ユーザーが画像の選択をキャンセルした際のコールバックメソッド 
+     //ユーザーが画像の選択をキャンセルした際のコールバックメソッド
     func  imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true, completion: nil)
     }
