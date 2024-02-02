@@ -7,8 +7,10 @@
 
 import UIKit
 import Firebase
+import FBSDKLoginKit
 
 class LoginViewController: UIViewController {
+   
 
     
     
@@ -81,6 +83,13 @@ class LoginViewController: UIViewController {
         return button
     }()
     
+    
+    private let facebookLoginButton: FBLoginButton = {
+        let button = FBLoginButton()
+        button.permissions = ["email" , "public_profile"]
+        return button
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.addSubview(scrollView)
@@ -88,6 +97,8 @@ class LoginViewController: UIViewController {
         scrollView.addSubview(emailField)
         scrollView.addSubview(passwordField)
         scrollView.addSubview(loginButton)
+        scrollView.addSubview(facebookLoginButton)
+        
         title = "ログイン"
         view.backgroundColor = .white
    
@@ -98,7 +109,7 @@ class LoginViewController: UIViewController {
         
         emailField.delegate = self
         passwordField.delegate = self
-        
+        facebookLoginButton.delegate = self
     }
     
     override func viewDidLayoutSubviews() {
@@ -113,6 +124,10 @@ class LoginViewController: UIViewController {
         passwordField.frame = CGRect(x:30 , y: emailField.bottom + 10, width: scrollView.width - 60, height: 52)
         
         loginButton.frame = CGRect(x:30 , y: passwordField.bottom + 10, width: scrollView.width - 60, height: 52)
+        
+        facebookLoginButton.frame = CGRect(x:30 , y: loginButton.bottom + 10, width: scrollView.width - 60, height: 52)
+        
+//        facebookLoginButton.frame.origin.y = loginButton.bottom + 20
     }
     
     @objc private func  loginButtonTapped() {
@@ -180,3 +195,81 @@ extension  LoginViewController: UITextFieldDelegate {
         return true
     }
 }
+
+
+//facebookによってログインする
+extension LoginViewController: LoginButtonDelegate {
+    
+    // ログアウトする際
+    func loginButtonDidLogOut(_ loginButton: FBLoginButton) {
+        
+    }
+    
+    //ログイン
+    func loginButton(_ loginButton: FBSDKLoginKit.FBLoginButton, didCompleteWith result: FBSDKLoginKit.LoginManagerLoginResult?, error: (Error)?) {
+        
+        //トークンが取得できなかった場合の処理
+        guard let token = result?.token?.tokenString else {
+            print("facebookでログインに失敗しました")
+            return
+        }
+        
+        let facebookRequest = FBSDKLoginKit.GraphRequest(graphPath: "me", parameters: ["fields" : "email , name" ], tokenString: token, version: nil, httpMethod: .get)
+        
+        facebookRequest.start(completion: {_, result , error in
+            
+            
+            print(result)
+            
+            guard let result = result as? [String: Any], error == nil else {
+                print("グラフリクエストの生成に失敗")
+                return
+            }
+            guard let userName = result["name"] as? String, let email = result["email"] as? String else{
+                print("イーメールとネームのゲットに失敗")
+                return
+            }
+            //　空白で分割して、二つの要素に分ける
+            let nameComponents = userName.components(separatedBy: " ")
+            
+            guard nameComponents.count == 2 else {
+                return
+            }
+            
+            let firstName = nameComponents[0]
+            let lastName = nameComponents[1]
+            
+            DatabaseManager.shared.userExists(with: email, completion: { exists in
+                if !exists {
+                    DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email))
+                }
+            })
+            // Facebookのアクセストークンを使用してFirebaseの認証トークンを作成
+            let credential = FacebookAuthProvider.credential(withAccessToken: token)
+            
+            // Firebaseでユーザーをログインさせる
+            FirebaseAuth.Auth.auth().signIn(with: credential, completion: { [weak self] authResult ,error in
+                
+                guard  let strongSelf = self else {
+                    return
+                }
+                // ログイン結果とエラーを確認
+                guard authResult != nil , error == nil else {
+                    if let error = error{
+                        // ログインに失敗した場合のエラー処理
+                        print("Facebookの資格情報によるログインに失敗しました\(error)")
+                    }
+                    return
+                }
+                // ログイン成功時の処理
+                print("ユーザーが正常にログインしました")
+                strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            })
+        })
+        
+    }
+    
+}
+    
+   
+

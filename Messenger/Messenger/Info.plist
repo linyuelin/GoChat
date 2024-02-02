@@ -2,10 +2,36 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCameraUsageDescription</key>
-	<string>アプリがカメラへのアクセスが必要です。写真やビデオの撮影に使用します。</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>アプリは写真ライブラリへのアクセスが必要です。許可しますか？</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb349918477911085</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.356797262380-ihjcpi8b3fld7a20lbldkdks40fdajdg</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<true/>
+	<key>FacebookAppID</key>
+	<string>349918477911085</string>
+	<key>FacebookClientToken</key>
+	<string>b5c234313760bf312e64b48d599a999b</string>
+	<key>FacebookDisplayName</key>
+	<string>Messenger</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
