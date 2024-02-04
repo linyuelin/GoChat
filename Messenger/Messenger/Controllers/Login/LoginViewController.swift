@@ -8,9 +8,10 @@
 import UIKit
 import Firebase
 import FBSDKLoginKit
+import JGProgressHUD
 
 class LoginViewController: UIViewController {
-   
+    private let spinner = JGProgressHUD(style: .dark)
 
     
     
@@ -141,12 +142,20 @@ class LoginViewController: UIViewController {
             alertUserLoginError()
             return
         }
+        
+        //　スピナーを表示する
+        spinner.show(in: view)
         //Firebaseを介してサインインする
         FirebaseAuth.Auth.auth().signIn(withEmail: email , password: password , completion: { [weak self]
             authResult , error in
             
             guard let strongSelf = self else {
                 return
+            }
+            
+            // ビューはメインメソッドにアサイン
+            DispatchQueue.main.async{
+                strongSelf.spinner.dismiss()
             }
             
             
