@@ -145,6 +145,7 @@ class LoginViewController: UIViewController {
         
         //　スピナーを表示する
         spinner.show(in: view)
+        
         //Firebaseを介してサインインする
         FirebaseAuth.Auth.auth().signIn(withEmail: email , password: password , completion: { [weak self]
             authResult , error in
@@ -163,7 +164,9 @@ class LoginViewController: UIViewController {
                 print("\(email)ログイン失敗")
                       return
             }
-              
+            
+            UserDefaults.standard.set(email, forKey: "email")
+            
             strongSelf.navigationController?.dismiss(animated: true, completion: nil)
             
         })
@@ -250,7 +253,12 @@ extension LoginViewController: LoginButtonDelegate {
             
             DatabaseManager.shared.userExists(with: email, completion: { exists in
                 if !exists {
-                    DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email))
+                    let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
+                    DatabaseManager.shared.insertUser(with: chatUser, completion: { success in
+                        if success {
+                            //画像をアップロード
+                        }
+                    })
                 }
             })
             // Facebookのアクセストークンを使用してFirebaseの認証トークンを作成

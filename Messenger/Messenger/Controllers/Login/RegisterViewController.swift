@@ -213,6 +213,7 @@ class RegisterViewController: UIViewController {
             DispatchQueue.main.async {
                 strongSelf.spinner.dismiss()
             }
+            
             guard !exists else {
                 //存在してるユーザー
                 strongSelf.alertUserLoginError(message: "このメールアドレスは既に使用されています。別のメールアドレスを試してください。")
@@ -227,9 +228,31 @@ class RegisterViewController: UIViewController {
                     print("アカンウト作成に失敗")
                     return
                 }
-                
+               
                 //成功した場合
-                DatabaseManager.shared.insertUser(with: ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email))
+                let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
+                DatabaseManager.shared.insertUser(with: chatUser , completion: { success in
+                    if success {
+                        //画像をアップロード
+                        guard let image = strongSelf.imageView.image,
+                              // imageをPNG形式のバイナリデータに変換する
+                              let data = image.pngData() else {
+                            return
+                        }
+                        
+                        let filename = chatUser.profilePictureFileName
+                        StorageManager.shared.uploadProfilePicture(with: data, fileName: filename, completion: { result in
+                            switch result {
+                            case .success(let dowmloadUrl):
+                                //ユーザーのデフォルト設定に保存する 
+                                UserDefaults.standard.set( dowmloadUrl, forKey: "profile_picture_url")
+                               
+                            case .failure(let error):
+                                print("Storage に画像をアップロードすることに失敗した \(error)")
+                            }
+                        })
+                    }
+                })
                 
                 strongSelf.navigationController?.dismiss(animated: true, completion: nil)
             })
