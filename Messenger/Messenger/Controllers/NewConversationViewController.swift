@@ -94,6 +94,11 @@ extension NewConversationViewController: UITableViewDelegate,UITableViewDataSour
         //会話を始める
         let targetUserData = results[indexPath.row]
         
+        dismiss(animated: true , completion: { [weak self] in
+            self?.completion?(targetUserData)
+        })
+        
+       
     }
     
 }
