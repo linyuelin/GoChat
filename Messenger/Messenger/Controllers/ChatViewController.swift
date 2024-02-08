@@ -66,19 +66,30 @@ class ChatViewController: MessagesViewController  {
     public var isNewConversation = false
     
     public let otherUserEmail: String
-
+    
+    private var conversationId: String?
+    
     private var messages = [Message]()
     
     private var selfSender: Sender? {
         guard let email = UserDefaults.standard.value(forKey: "email") as? String else {
             return nil
         }
-       return Sender(photoURL: "", senderId: "1", displayName: "Joe Smith")
+        
+        
+        let safeEmail = DatabaseManager.safeEmail(emailAddress: email)
+        
+       return Sender(photoURL: "", senderId: safeEmail, displayName: "自分")
+        
+        
     }
+   
     
-    init(with email: String) {
+    init(with email: String , id: String?) {
+        self.conversationId = id
         self.otherUserEmail = email
         super.init(nibName: nil, bundle: nil)
+       
     }
     
     required init?(coder: NSCoder) {
@@ -93,11 +104,77 @@ class ChatViewController: MessagesViewController  {
         messagesCollectionView.messagesLayoutDelegate = self
         messagesCollectionView.messagesDisplayDelegate = self
         messageInputBar.delegate = self
+        setupInputButton()
+    }
+    
+    //　インプットボタン
+    private func setupInputButton() {
+        let button = InputBarButtonItem()
+        button.setSize(CGSize(width: 35, height: 35), animated: false)
+        button.setImage(UIImage(systemName: "paperclip"), for: .normal)
+        button.onTouchUpInside{ [weak self] _ in
+            self?.presentInputActionSheet()
+        }
+        messageInputBar.setLeftStackViewWidthConstant(to: 36, animated: false)
+        messageInputBar.setStackViewItems([button], forStack: .left, animated: false)
+    }
+    
+    private func presentInputActionSheet(){
+        let actionSheet = UIAlertController(title: "メディア添付", message: "お好きなどうぞ", preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "写真", style: .default , handler: {[weak self] _ in
+            
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "ビデオ", style: .default , handler: {[weak self] _ in
+            
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: {[weak self] _ in
+            
+        }))
+        
+        present(actionSheet, animated: true)
+    }
+    
+    
+    
+    private func listenForMessages(id: String ,shouldScrollToBottom: Bool) {
+        DatabaseManager.shared.getAllMessagesForConversation(with: id, completion: {[weak self] result in
+            switch result {
+            case .success(let messages):
+                guard !messages.isEmpty else {
+                    return
+                }
+                
+                self?.messages = messages
+                
+                DispatchQueue.main.async{
+                   
+                    // チャット画面で表示されているメッセージデータを再度読み込み、同時にユーザーが現在見ている位置を保持します.ユーザーエクスペリエンスを向上させます。
+                    self?.messagesCollectionView.reloadDataAndKeepOffset()
+                    
+                    if shouldScrollToBottom {
+                        
+                    self?.messagesCollectionView.scrollToBottom()
+                   
+                    }
+                    
+                }
+               
+            case .failure(let error):
+                print("メッセージ取得に失敗")
+            }
+        })
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         messageInputBar.inputTextView.becomeFirstResponder()
+        if let conversationId = conversationId {
+            listenForMessages(id: conversationId , shouldScrollToBottom: true)
+            
+        }
     }
     
    
@@ -107,20 +184,21 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
     func inputBar(_ inputBar: InputBarAccessoryView, didPressSendButtonWith text: String) {
         
         guard !text.replacingOccurrences(of: " ", with: "").isEmpty ,
-        let selfSender = self.selfSender ,let messageId = createMessageId() else
+              let selfSender = self.selfSender ,let messageId = createMessageId() else
         {
             return
         }
         print("発送\(text)")
+        
+        let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .text(text))
         //メッセージを発信する
         if isNewConversation {
-            //データベースに会話を入れる
-            let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .text(text))
-            
-            DatabaseManager.shared.createNewConversation(with: otherUserEmail, firstMessage: message, completion: { success in
+            //データベースにメッセージを入れる
+            DatabaseManager.shared.createNewConversation(with: otherUserEmail,name: self.title ?? "User" , firstMessage: message, completion: { [weak self ] success in
                 
                 if success {
-                   print("メッセージ送信した")
+                    print("メッセージ送信した")
+                    self?.isNewConversation = false
                 }
                 else {
                     print("送信に失敗した")
@@ -128,10 +206,20 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
             })
         }
         else {
+            guard let conversationId = conversationId , let name = self.title else {
+                return
+            }
             // 存在してる会話に追加
+            DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: otherUserEmail , newMessage: message, completion: { success in
+                if success {
+                    print("メッセージ送信した")
+                }
+                else {
+                    print("送信に失敗した")
+                }
+            })
             
         }
-        
     }
     
     
@@ -155,12 +243,13 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
 extension ChatViewController: MessagesDataSource,MessagesLayoutDelegate,MessagesDisplayDelegate {
     
    
+    //メッセージの発信方
     func currentSender() -> MessageKit.SenderType {
         if let sender = selfSender {
             return sender
         }
         fatalError("セルフ送信者がnilです、メールはキャッシュされるべきです")
-        return Sender(photoURL: "", senderId: "12", displayName: "")
+       
     }
     
     func messageForItem(at indexPath: IndexPath, in messagesCollectionView: MessageKit.MessagesCollectionView) -> MessageKit.MessageType {
