@@ -50,6 +50,30 @@ final class StorageManager {
         })
     }
     
+    ///  　ストレージにメッセージ写真をアップロードし、URL、文字列で完了時にコールバックを返します
+    public func uploadMessagePhoto(with data: Data , fileName: String , completion: @escaping UploadPictureCompletion) {
+        
+        storage.child("message_images/\(fileName)").putData(data, metadata: nil , completion: { metadata,error in
+            guard error == nil else {
+                // 失敗
+                print("firebaseに画像を送ることに失敗した")
+                completion(.failure(StorageErrors.failedToUpload))
+                return
+            }
+            
+            self.storage.child("message_images/\(fileName)").downloadURL(completion: {url , error in
+                guard let url = url else {
+                    print("ダウンロードURLのゲットに失敗した")
+                    completion(.failure(StorageErrors.failedToGetDownloadUrl))
+                    return
+                }
+                let urlString = url.absoluteString
+                print("ゲットしたurl: \(urlString)")
+                completion(.success(urlString))
+            })
+        })
+    }
+    
     public enum StorageErrors: Error {
         case failedToUpload
         case failedToGetDownloadUrl

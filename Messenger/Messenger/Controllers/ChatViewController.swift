@@ -50,6 +50,18 @@ struct Sender: SenderType {
    public var displayName: String
 }
 
+struct Media: MediaItem {
+    var url: URL?
+    
+    var image: UIImage?
+    
+    var placeholderImage: UIImage
+    
+    var size: CGSize
+    
+    
+}
+
 class ChatViewController: MessagesViewController  {
     
     public static let dateFormatter: DateFormatter = {
@@ -103,6 +115,7 @@ class ChatViewController: MessagesViewController  {
         messagesCollectionView.messagesDataSource = self
         messagesCollectionView.messagesLayoutDelegate = self
         messagesCollectionView.messagesDisplayDelegate = self
+        messagesCollectionView.messageCellDelegate = self
         messageInputBar.delegate = self
         setupInputButton()
     }
@@ -123,21 +136,47 @@ class ChatViewController: MessagesViewController  {
         let actionSheet = UIAlertController(title: "メディア添付", message: "お好きなどうぞ", preferredStyle: .actionSheet)
         
         actionSheet.addAction(UIAlertAction(title: "写真", style: .default , handler: {[weak self] _ in
+            self?.presentPhotoInputActionSheet()
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "ビデオ", style: .default , handler: { _ in
             
         }))
         
-        actionSheet.addAction(UIAlertAction(title: "ビデオ", style: .default , handler: {[weak self] _ in
+        actionSheet.addAction(UIAlertAction(title: "オーディオ", style: .default , handler: { _ in
             
         }))
         
-        actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: {[weak self] _ in
-            
-        }))
+        actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: nil))
         
         present(actionSheet, animated: true)
     }
     
+    private func presentPhotoInputActionSheet(){
+        let actionSheet = UIAlertController(title: "写真添付", message: "どちらから選択します", preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "写真ライブラリ", style: .default , handler: {[weak self] _ in
+            let picker = UIImagePickerController()
+            picker.sourceType = .photoLibrary
+            picker.delegate = self
+            picker.allowsEditing = true
+            self?.present(picker,animated: true)
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "カメラ", style: .default , handler: {[weak self]  _ in
+            let picker = UIImagePickerController()
+            picker.sourceType = .camera
+            picker.delegate = self
+            picker.allowsEditing = true
+            self?.present(picker,animated: true)
+        }))
+
+        actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: nil))
+        
+        present(actionSheet, animated: true)
     
+    }
+
     
     private func listenForMessages(id: String ,shouldScrollToBottom: Bool) {
         DatabaseManager.shared.getAllMessagesForConversation(with: id, completion: {[weak self] result in
@@ -176,9 +215,71 @@ class ChatViewController: MessagesViewController  {
             
         }
     }
-    
-   
 }
+
+extension ChatViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    //取り消し
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true, completion: nil)
+    }
+    
+    //選択済み
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        //ライブラリを閉じる
+        picker.dismiss(animated: true, completion: nil)
+        //UIImagePickerController.InfoKey.editedImage: 選択したメッセージを出す
+        guard let image = info[UIImagePickerController.InfoKey.editedImage] as? UIImage,
+         //image.pngData()：　バイナリファイルに変換
+        let imageData = image.pngData(),
+        let messageId = createMessageId() ,
+        let conversationId = conversationId ,
+        let name = self.title,
+        let selfSender = selfSender else {
+            return
+        }
+        
+        let fileName = "photo_message_" + messageId.replacingOccurrences(of: " ", with: "-") + ""
+        
+        //イメージをアップロード
+        StorageManager.shared.uploadMessagePhoto(with: imageData, fileName: fileName, completion:{ [weak self]result in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            switch result {
+            case .success(let urlString):
+                //メッセージ送信の下準備
+                print("アップロードした画像メッセージ:\(urlString)")
+                guard let url = URL(string: urlString),let placeholder = UIImage(systemName: "plus") else {
+                    return
+                }
+                
+                let media = Media(url: url, image: nil , placeholderImage: placeholder, size: .zero)
+                
+                let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .photo(media))
+                
+                DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                    
+                    if success {
+                        print("画像メッセージ送信済み")
+                    }
+                    else {
+                        print("画像メッセージ送信失敗")
+                    }
+                })
+                break
+            case .failure(let error):
+                print("画像メッセージのアップロードが失敗：\(error)")
+            }
+        })
+        
+        
+       
+    }
+}
+
+
+
 extension ChatViewController: InputBarAccessoryViewDelegate {
     
     func inputBar(_ inputBar: InputBarAccessoryView, didPressSendButtonWith text: String) {
@@ -242,14 +343,14 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
 
 extension ChatViewController: MessagesDataSource,MessagesLayoutDelegate,MessagesDisplayDelegate {
     
-   
+    
     //メッセージの発信方
     func currentSender() -> MessageKit.SenderType {
         if let sender = selfSender {
             return sender
         }
         fatalError("セルフ送信者がnilです、メールはキャッシュされるべきです")
-       
+        
     }
     
     func messageForItem(at indexPath: IndexPath, in messagesCollectionView: MessageKit.MessagesCollectionView) -> MessageKit.MessageType {
@@ -260,5 +361,43 @@ extension ChatViewController: MessagesDataSource,MessagesLayoutDelegate,Messages
         return messages.count
     }
     
+    func configureMediaMessageImageView(_ imageView: UIImageView, for message: MessageType, at indexPath: IndexPath, in messagesCollectionView: MessagesCollectionView) {
+        
+        guard let message = message as? Message else {
+            return
+        }
+        
+        switch message.kind {
+        case .photo(let media):
+            guard let imageUrl = media.url else {
+                return
+            }
+            imageView.sd_setImage(with: imageUrl,completed: nil)
+        default:
+            break
+        }
+    }
+}
     
+
+extension ChatViewController: MessageCellDelegate {
+    func didTapImage(in cell: MessageCollectionViewCell) {
+        guard let indexPath = messagesCollectionView.indexPath(for: cell) else {
+            return
+        }
+        let message = messages[indexPath.section]
+        
+        switch message.kind {
+        case .photo(let media):
+            guard let imageUrl = media.url else {
+                return
+            }
+            let vc = PhotoViewerViewController(with:  imageUrl)
+            self.navigationController?.pushViewController(vc, animated: true)
+           default:
+            break
+        }
+        
+    
+    }
 }
