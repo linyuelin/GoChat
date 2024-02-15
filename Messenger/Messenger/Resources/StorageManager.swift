@@ -53,7 +53,7 @@ final class StorageManager {
     ///  　ストレージにメッセージ写真をアップロードし、URL、文字列で完了時にコールバックを返します
     public func uploadMessagePhoto(with data: Data , fileName: String , completion: @escaping UploadPictureCompletion) {
         
-        storage.child("message_images/\(fileName)").putData(data, metadata: nil , completion: { metadata,error in
+        storage.child("message_images/\(fileName)").putData(data, metadata: nil , completion: {[weak self] metadata,error in
             guard error == nil else {
                 // 失敗
                 print("firebaseに画像を送ることに失敗した")
@@ -61,7 +61,7 @@ final class StorageManager {
                 return
             }
             
-            self.storage.child("message_images/\(fileName)").downloadURL(completion: {url , error in
+            self?.storage.child("message_images/\(fileName)").downloadURL(completion: {url , error in
                 guard let url = url else {
                     print("ダウンロードURLのゲットに失敗した")
                     completion(.failure(StorageErrors.failedToGetDownloadUrl))
@@ -73,6 +73,32 @@ final class StorageManager {
             })
         })
     }
+    
+    ///  　ストレージにメッセービデオをアップロードし、URL、文字列で完了時にコールバックを返します
+    public func uploadMessageVideo(with fileUrl: URL , fileName: String , completion: @escaping UploadPictureCompletion) {
+        
+        storage.child("message_videos/\(fileName)").putFile(from: fileUrl, metadata: nil , completion: {[weak self] metadata,error in
+            guard error == nil else {
+                // 失敗
+                print("firebaseにビデオを送ることに失敗した")
+                completion(.failure(StorageErrors.failedToUpload))
+                return
+            }
+            
+            self?.storage.child("message_videos/\(fileName)").downloadURL(completion: {url , error in
+                guard let url = url else {
+                    print("ダウンロードURLのゲットに失敗した")
+                    completion(.failure(StorageErrors.failedToGetDownloadUrl))
+                    return
+                }
+                let urlString = url.absoluteString
+                print("ゲットしたurl: \(urlString)")
+                completion(.success(urlString))
+            })
+        })
+    }
+    
+    
     
     public enum StorageErrors: Error {
         case failedToUpload

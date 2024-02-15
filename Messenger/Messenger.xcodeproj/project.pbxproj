@@ -26,6 +26,7 @@
 		B535DCA62B73B97200AB0F96 /* ConversationTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B535DCA52B73B97200AB0F96 /* ConversationTableViewCell.swift */; };
 		B592B9C42B6B5FC2001FD009 /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B592B9C32B6B5FC2001FD009 /* DatabaseManager.swift */; };
 		B592B9C62B6D2255001FD009 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B592B9C52B6D2255001FD009 /* GoogleService-Info.plist */; };
+		B59EB8A22B7D0A19003A25E4 /* NewConversationCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B59EB8A12B7D0A19003A25E4 /* NewConversationCell.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 		B563B2A52B6B2EDD00BE5E93 /* Messenger.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Messenger.entitlements; sourceTree = "<group>"; };
 		B592B9C32B6B5FC2001FD009 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
 		B592B9C52B6D2255001FD009 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		B59EB8A12B7D0A19003A25E4 /* NewConversationCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewConversationCell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -120,6 +122,7 @@
 				B52D61F72B69CCAC0066C1C8 /* Storyboards */,
 				B52D61E72B69CA6E0066C1C8 /* Assets.xcassets */,
 				B535DCA52B73B97200AB0F96 /* ConversationTableViewCell.swift */,
+				B59EB8A12B7D0A19003A25E4 /* NewConversationCell.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -302,6 +305,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B52D61F92B69D0AF0066C1C8 /* LoginViewController.swift in Sources */,
+				B59EB8A22B7D0A19003A25E4 /* NewConversationCell.swift in Sources */,
 				B592B9C42B6B5FC2001FD009 /* DatabaseManager.swift in Sources */,
 				B52D61FB2B69D0E10066C1C8 /* RegisterViewController.swift in Sources */,
 				B52D62012B6A03FA0066C1C8 /* NewConversationViewController.swift in Sources */,
@@ -471,8 +475,9 @@
 				DEVELOPMENT_TEAM = JSR5234QG3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Messenger/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "アプリがカメラへのアクセスが必要です。写真やビデオの撮影に使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "アプリは写真ライブラリへのアクセスが必要です。許可しますか？";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a profile picture";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Video messages";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Select a photo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -502,8 +507,9 @@
 				DEVELOPMENT_TEAM = JSR5234QG3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Messenger/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "アプリがカメラへのアクセスが必要です。写真やビデオの撮影に使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "アプリは写真ライブラリへのアクセスが必要です。許可しますか？";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a profile picture";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Video messages";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Select a photo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;

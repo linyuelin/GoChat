@@ -8,6 +8,8 @@
 import UIKit
 import MessageKit
 import InputBarAccessoryView
+import AVFoundation
+import AVKit
 
 struct Message: MessageType {
    public var sender: SenderType
@@ -139,8 +141,8 @@ class ChatViewController: MessagesViewController  {
             self?.presentPhotoInputActionSheet()
         }))
         
-        actionSheet.addAction(UIAlertAction(title: "ビデオ", style: .default , handler: { _ in
-            
+        actionSheet.addAction(UIAlertAction(title: "ビデオ", style: .default , handler: { [weak self] _ in
+            self?.presentVideoInputActionSheet()
         }))
         
         actionSheet.addAction(UIAlertAction(title: "オーディオ", style: .default , handler: { _ in
@@ -176,6 +178,36 @@ class ChatViewController: MessagesViewController  {
         present(actionSheet, animated: true)
     
     }
+    
+    private func presentVideoInputActionSheet(){
+        let actionSheet = UIAlertController(title: "ビデオ添付", message: "どちらから選択します", preferredStyle: .actionSheet)
+        
+        actionSheet.addAction(UIAlertAction(title: "カメラ", style: .default , handler: {[weak self] _ in
+            let picker = UIImagePickerController()
+            picker.sourceType = .camera
+            picker.delegate = self
+            picker.mediaTypes = ["public.movie"]
+            picker.videoQuality = .typeMedium
+            picker.allowsEditing = true
+            self?.present(picker,animated: true)
+        }))
+        
+        actionSheet.addAction(UIAlertAction(title: "ライブラリ", style: .default , handler: {[weak self]  _ in
+            let picker = UIImagePickerController()
+            picker.sourceType = .photoLibrary
+            picker.delegate = self
+            picker.allowsEditing = true
+            picker.mediaTypes = ["public.movie"]
+            picker.videoQuality = .typeMedium
+            self?.present(picker,animated: true)
+        }))
+
+        actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: nil))
+        
+        present(actionSheet, animated: true)
+    
+    }
+
 
     
     private func listenForMessages(id: String ,shouldScrollToBottom: Bool) {
@@ -227,53 +259,90 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         //ライブラリを閉じる
         picker.dismiss(animated: true, completion: nil)
-        //UIImagePickerController.InfoKey.editedImage: 選択したメッセージを出す
-        guard let image = info[UIImagePickerController.InfoKey.editedImage] as? UIImage,
-         //image.pngData()：　バイナリファイルに変換
-        let imageData = image.pngData(),
-        let messageId = createMessageId() ,
+       guard  let messageId = createMessageId() ,
         let conversationId = conversationId ,
         let name = self.title,
         let selfSender = selfSender else {
             return
         }
-        
-        let fileName = "photo_message_" + messageId.replacingOccurrences(of: " ", with: "-") + ""
-        
-        //イメージをアップロード
-        StorageManager.shared.uploadMessagePhoto(with: imageData, fileName: fileName, completion:{ [weak self]result in
-            guard let strongSelf = self else {
-                return
-            }
+          //UIImagePickerController.InfoKey.editedImage: 選択したメッセージを出す
+          if let image = info[UIImagePickerController.InfoKey.editedImage] as? UIImage,
+             //image.pngData()：　バイナリファイルに変換
+             let imageData = image.pngData() {
+              
+              let fileName = "photo_message_" + messageId.replacingOccurrences(of: " ", with: "-") + ""
+              
+              //イメージをアップロード
+              StorageManager.shared.uploadMessagePhoto(with: imageData, fileName: fileName, completion:{ [weak self]result in
+                  guard let strongSelf = self else {
+                      return
+                  }
+                  
+                  switch result {
+                  case .success(let urlString):
+                      //メッセージ送信の下準備
+                      print("アップロードした画像メッセージ:\(urlString)")
+                      guard let url = URL(string: urlString),let placeholder = UIImage(systemName: "plus") else {
+                          return
+                      }
+                      
+                      let media = Media(url: url, image: nil , placeholderImage: placeholder, size: .zero)
+                      
+                      let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .photo(media))
+                      
+                      DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                          
+                          if success {
+                              print("画像メッセージ送信済み")
+                          }
+                          else {
+                              print("画像メッセージ送信失敗")
+                          }
+                      })
+                
+                  case .failure(let error):
+                      print("画像メッセージのアップロードが失敗：\(error)")
+                  }
+              })
+          }
+        else if let videoUrl = info[.mediaURL] as? URL {
+            let fileName = "photo_message_" + messageId.replacingOccurrences(of: " ", with: "-") + ".mov"
             
-            switch result {
-            case .success(let urlString):
-                //メッセージ送信の下準備
-                print("アップロードした画像メッセージ:\(urlString)")
-                guard let url = URL(string: urlString),let placeholder = UIImage(systemName: "plus") else {
+            //ビデオをダウンロード
+            
+            StorageManager.shared.uploadMessageVideo(with: videoUrl, fileName: fileName, completion:{ [weak self]result in
+                guard let strongSelf = self else {
                     return
                 }
                 
-                let media = Media(url: url, image: nil , placeholderImage: placeholder, size: .zero)
-                
-                let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .photo(media))
-                
-                DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                switch result {
+                case .success(let urlString):
+                    //メッセージ送信の下準備
+                    print("アップロードしたビデオメッセージ: \(urlString)")
+                    guard let url = URL(string: urlString),let placeholder = UIImage(systemName: "plus") else {
+                        return
+                    }
                     
-                    if success {
-                        print("画像メッセージ送信済み")
-                    }
-                    else {
-                        print("画像メッセージ送信失敗")
-                    }
-                })
-                break
-            case .failure(let error):
-                print("画像メッセージのアップロードが失敗：\(error)")
-            }
-        })
-        
-        
+                    let media = Media(url: url, image: nil , placeholderImage: placeholder, size: .zero)
+                    
+                    let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .video(media))
+                    
+                    DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                        
+                        if success {
+                            print("画像メッセージ送信済み")
+                        }
+                        else {
+                            print("画像メッセージ送信失敗")
+                        }
+                    })
+              
+                case .failure(let error):
+                    print("画像メッセージのアップロードが失敗：\(error)")
+                }
+            })
+            
+        }
        
     }
 }
@@ -394,10 +463,20 @@ extension ChatViewController: MessageCellDelegate {
             }
             let vc = PhotoViewerViewController(with:  imageUrl)
             self.navigationController?.pushViewController(vc, animated: true)
+            
+        case .video(let media):
+            guard let videoUrl = media.url else {
+                return
+            }
+        
+            let vc = AVPlayerViewController()
+            vc.player = AVPlayer(url: videoUrl)
+            present(vc , animated: true)
+            
            default:
             break
         }
         
-    
+
     }
 }
