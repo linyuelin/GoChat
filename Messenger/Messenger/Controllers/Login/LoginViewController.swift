@@ -9,11 +9,11 @@ import UIKit
 import Firebase
 import FBSDKLoginKit
 import JGProgressHUD
+import GoogleSignIn
+
 
 class LoginViewController: UIViewController {
     private let spinner = JGProgressHUD(style: .dark)
-
-    
     
     private let imageView: UIImageView = {
         let image =  UIImageView()
@@ -46,7 +46,7 @@ class LoginViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         return field
     }()
     
@@ -68,7 +68,7 @@ class LoginViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         field.isSecureTextEntry = true
         return field
     }()
@@ -91,8 +91,19 @@ class LoginViewController: UIViewController {
         return button
     }()
     
+    private var loginObserver: NSObjectProtocol?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        loginObserver = NotificationCenter.default.addObserver(forName: .didLogInNotification, object: nil, queue: .main, using: {[weak self] _ in
+            guard let strongSelf  = self else {
+                return
+            }
+            
+            strongSelf.navigationController?.dismiss(animated: true , completion: nil)
+        })
+        
+        
         view.addSubview(scrollView)
         scrollView.addSubview(imageView)
         scrollView.addSubview(emailField)
@@ -101,7 +112,7 @@ class LoginViewController: UIViewController {
         scrollView.addSubview(facebookLoginButton)
         
         title = "ログイン"
-        view.backgroundColor = .white
+        view.backgroundColor = .systemBackground
    
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "登録", style: .done, target: self, action: #selector(didTapRegister))
         

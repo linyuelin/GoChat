@@ -49,7 +49,7 @@ class RegisterViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         return field
     }()
     
@@ -71,7 +71,7 @@ class RegisterViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         field.isSecureTextEntry = false
         return field
     }()
@@ -93,7 +93,7 @@ class RegisterViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         return field
     }()
     
@@ -114,7 +114,7 @@ class RegisterViewController: UIViewController {
         //テキスト内で固定された幅五ポイントの余白を追加する
         field.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 5, height: 0))
         field.leftViewMode = .always
-        field.backgroundColor = .white
+        field.backgroundColor = .secondarySystemBackground
         return field
     }()
     
@@ -140,7 +140,7 @@ class RegisterViewController: UIViewController {
         scrollView.addSubview(registerButton)
         
         title = "ログイン"
-        view.backgroundColor = .white
+        view.backgroundColor = .secondarySystemBackground
    
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "登録", style: .done, target: self, action: #selector(didTapRegister))
         

@@ -10,6 +10,7 @@ import MessageKit
 import InputBarAccessoryView
 import AVFoundation
 import AVKit
+import CoreLocation
 
 struct Message: MessageType {
    public var sender: SenderType
@@ -58,6 +59,14 @@ struct Media: MediaItem {
     var image: UIImage?
     
     var placeholderImage: UIImage
+    
+    var size: CGSize
+    
+    
+}
+
+struct Location: LocationItem {
+    var location: CLLocation
     
     var size: CGSize
     
@@ -148,10 +157,53 @@ class ChatViewController: MessagesViewController  {
         actionSheet.addAction(UIAlertAction(title: "オーディオ", style: .default , handler: { _ in
             
         }))
+        actionSheet.addAction(UIAlertAction(title: "位置", style: .default , handler: {[weak self] _ in
+            self?.presentLocationPicker()
+        }))
         
         actionSheet.addAction(UIAlertAction(title: "キャセル", style: .cancel , handler: nil))
         
         present(actionSheet, animated: true)
+    }
+    
+    private func presentLocationPicker() {
+        let vc = LocationPickerViewController(coordinates: nil)
+        vc.title = "場所を選択する"
+        vc.navigationItem.largeTitleDisplayMode = .never
+        
+        vc.completion = {[weak self] selectedCoorindates in
+            
+            guard let strongSelf = self else {
+                return
+            }
+            
+            guard  let messageId = strongSelf.createMessageId() ,
+                   let conversationId = strongSelf.conversationId ,
+                    let name = strongSelf.title,
+                   let selfSender = strongSelf.selfSender else {
+                 return
+             }
+            
+            let longitude: Double = selectedCoorindates.longitude
+            let latitude: Double = selectedCoorindates.latitude
+            
+            let location = Location(location: CLLocation(latitude: latitude, longitude: longitude), size: .zero)
+            
+            let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .location(location))
+            
+            DatabaseManager.shared.sendMessage(to: conversationId, otherUserEmail: strongSelf.otherUserEmail, name: name, newMessage: message, completion: {success in
+                
+                if success {
+                    print("位置メッセージ送信済み")
+                }
+                else {
+                    print("位置メッセージ送信失敗")
+                }
+            })
+        }
+       
+        
+        navigationController?.pushViewController(vc, animated: true)
     }
     
     private func presentPhotoInputActionSheet(){
@@ -290,7 +342,7 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                       
                       let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .photo(media))
                       
-                      DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                      DatabaseManager.shared.sendMessage(to: conversationId, otherUserEmail: strongSelf.otherUserEmail, name: name, newMessage: message, completion: {success in
                           
                           if success {
                               print("画像メッセージ送信済み")
@@ -327,7 +379,7 @@ extension ChatViewController: UIImagePickerControllerDelegate, UINavigationContr
                     
                     let message = Message(sender: selfSender , messageId: messageId, sentDate: Date(), kind: .video(media))
                     
-                    DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: strongSelf.otherUserEmail, newMessage: message, completion: {success in
+                    DatabaseManager.shared.sendMessage(to: conversationId, otherUserEmail: strongSelf.otherUserEmail, name: name, newMessage: message, completion: {success in
                         
                         if success {
                             print("画像メッセージ送信済み")
@@ -380,7 +432,7 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
                 return
             }
             // 存在してる会話に追加
-            DatabaseManager.shared.sendMessage(to: conversationId, name: name, otherUserEmail: otherUserEmail , newMessage: message, completion: { success in
+            DatabaseManager.shared.sendMessage(to: conversationId, otherUserEmail: otherUserEmail, name: name , newMessage: message, completion: { success in
                 if success {
                     print("メッセージ送信した")
                 }
@@ -450,6 +502,26 @@ extension ChatViewController: MessagesDataSource,MessagesLayoutDelegate,Messages
     
 
 extension ChatViewController: MessageCellDelegate {
+    
+    func didTapMessage(in cell: MessageCollectionViewCell) {
+        guard let indexPath = messagesCollectionView.indexPath(for: cell) else {
+            return
+        }
+        let message = messages[indexPath.section]
+        
+        switch message.kind {
+        case .location(let locationData):
+            let coordinates = locationData.location.coordinate
+            let vc = LocationPickerViewController(coordinates: coordinates)
+            vc.title = "場所"
+            self.navigationController?.pushViewController(vc, animated: true)
+            
+           default:
+            break
+        }
+        
+    }
+    
     func didTapImage(in cell: MessageCollectionViewCell) {
         guard let indexPath = messagesCollectionView.indexPath(for: cell) else {
             return
