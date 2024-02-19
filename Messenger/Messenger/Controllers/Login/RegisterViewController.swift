@@ -228,6 +228,9 @@ class RegisterViewController: UIViewController {
                     print("アカンウト作成に失敗")
                     return
                 }
+                
+                UserDefaults.standard.setValue(email, forKey: "email")
+                UserDefaults.standard.setValue("\(firstName) \(lastName)", forKey: "name")
                
                 //成功した場合
                 let chatUser = ChatAppUser(firstName: firstName, lastName: lastName, emailAddress: email)
