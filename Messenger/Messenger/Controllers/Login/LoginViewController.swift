@@ -12,7 +12,7 @@ import JGProgressHUD
 import GoogleSignIn
 
 
-class LoginViewController: UIViewController {
+final class LoginViewController: UIViewController {
     private let spinner = JGProgressHUD(style: .dark)
     
     private let imageView: UIImageView = {

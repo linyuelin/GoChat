@@ -9,6 +9,7 @@ import Foundation
 import FirebaseStorage
 import FirebaseDatabase
 
+/// イメージ、動画などのファイルをフェッチ、アップロード、ゲットできます
 final class StorageManager {
     
     static let shared = StorageManager()
@@ -29,7 +30,11 @@ final class StorageManager {
     ///  　ストレージに画像をアップロードし、URL、文字列で完了時にコールバックを返します
     public func uploadProfilePicture(with data: Data , fileName: String , completion: @escaping UploadPictureCompletion) {
         
-        storage.child("images/\(fileName)").putData(data, metadata: nil , completion: { metadata,error in
+        storage.child("images/\(fileName)").putData(data, metadata: nil , completion: {[weak self] metadata,error in
+            guard let strongSelf = self else {
+                return
+            }
+            
             guard error == nil else {
                 // 失敗
                 print("firebaseに画像を送ることに失敗した")
@@ -37,7 +42,7 @@ final class StorageManager {
                 return
             }
             
-            self.storage.child("images/\(fileName)").downloadURL(completion: {url , error in
+            strongSelf.storage.child("images/\(fileName)").downloadURL(completion: {url , error in
                 guard let url = url else {
                     print("ダウンロードURLのゲットに失敗した")
                     completion(.failure(StorageErrors.failedToGetDownloadUrl))

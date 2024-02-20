@@ -10,6 +10,8 @@ import FirebaseDatabase
 import MessageKit
 import CoreLocation
 
+
+/// リアルタイム　データーベースとのデータの送受信を行います
 final class DatabaseManager {
     
     //共有のシングルトンインスタンスを作成
@@ -26,8 +28,10 @@ final class DatabaseManager {
 }
 
 extension DatabaseManager {
+    
+    /// ディクショナリー　ヌードを　取得
     public func getDataFor(path: String , completion: @escaping (Result<Any , Error>) -> Void ) {
-        self.database.child("\(path)").observeSingleEvent(of: .value ) { snapshot in
+        database.child("\(path)").observeSingleEvent(of: .value ) { snapshot in
             guard let value = snapshot.value else {
                 completion(.failure(DatabaseError.failedToFetch))
                 return
@@ -40,6 +44,9 @@ extension DatabaseManager {
 // MARK: - アカウント　マネジメント
 extension DatabaseManager {
     
+    ///  指定の電子メールに対するユーザーの存在を確認します
+    /// - `email`: 確認する対象の電子メール
+    /// - `completion`  結果を返す非同期クロージャ
     public func userExists(with email: String , completion: @escaping ((Bool) -> Void)) {
         
         let  safeEmail = DatabaseManager.safeEmail(emailAddress: email)
@@ -58,7 +65,12 @@ extension DatabaseManager {
         database.child(user.safeEmail).setValue([
             "first_name": user.firstName,
             "last_name" : user.lastName
-        ] , withCompletionBlock: { error , _ in
+        ] , withCompletionBlock: { [weak self] error , _ in
+            
+            guard let strongSelf = self else {
+                return
+            }
+            
             guard error == nil else {
                 print("データベースに書き込むのを失敗しました")
                 completion(false)
@@ -66,7 +78,8 @@ extension DatabaseManager {
             }
             
             //.value を使用して "users" ノードの一時的なデータスナップショットを取得しています
-            self.database.child("users").observeSingleEvent(of: .value , with: { snapshot in
+            strongSelf .database.child("users").observeSingleEvent(of: .value , with: { snapshot in
+               
                 
                 if var usersCollection = snapshot.value as? [[String: String]] {
                     //ユーザーディクショナリーに追加する
@@ -78,7 +91,7 @@ extension DatabaseManager {
                     usersCollection.append(newElement)
                     
                     //ユーザーを追加したコネクションアップロードする
-                    self.database.child("users").setValue(usersCollection , withCompletionBlock: { error , _ in
+                    strongSelf .database.child("users").setValue(usersCollection , withCompletionBlock: { error , _ in
                         guard error == nil else {
                             completion(false)
                             return
@@ -97,7 +110,7 @@ extension DatabaseManager {
                     ]
                     
                     //ノードを作成する
-                    self.database.child("users").setValue(newCollection , withCompletionBlock: { error , _ in
+                    strongSelf .database.child("users").setValue(newCollection , withCompletionBlock: { error , _ in
                         guard error == nil else {
                             completion(false)
                             return
@@ -110,6 +123,7 @@ extension DatabaseManager {
         })
     }
     
+    // データーベースから全てのユーザーを取得する
     public func getAllUsers(completion: @escaping (Result<[[String: String]], Error>) -> Void) {
         database.child("users").observeSingleEvent(of: .value, with: { snapshot in
             guard let value = snapshot.value as?[[String: String]] else {

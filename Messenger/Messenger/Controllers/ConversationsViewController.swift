@@ -10,21 +10,10 @@ import FirebaseAuth
 import JGProgressHUD
 
 
-struct Conversation {
-    let id: String
-    let name: String
-    let otherUserEmail: String
-    let latestMessage: LatestMessage
-}
-
-struct LatestMessage {
-    let date: String
-    let text: String
-    let isRead: Bool
-}
 
 
-class ConversationsViewController: UIViewController {
+/// 会話のリストを表示する
+final class ConversationsViewController: UIViewController {
       
     // スピナー
     private let spinner = JGProgressHUD(style: .dark)
@@ -233,13 +222,13 @@ extension ConversationsViewController: UITableViewDelegate , UITableViewDataSour
             
             let conversationId = conversations[indexPath.row].id
             tableView.beginUpdates()
+            self.conversations.remove(at: indexPath.row)
+            //指定された行、　左から
+            tableView.deleteRows(at: [indexPath], with: .left)
             
-            DatabaseManager.shared.deleteConversation(conversationId: conversationId , completion: {[weak self] success in
+            DatabaseManager.shared.deleteConversation(conversationId: conversationId , completion: { success in
                 if success {
-                    self?.conversations.remove(at: indexPath.row)
-                    //指定された行、　左から
-                    tableView.deleteRows(at: [indexPath], with: .left)
-                    
+                // モデルと行を追加してエラーを表示します
                 }
             })
            
